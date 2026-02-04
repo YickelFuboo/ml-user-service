@@ -1,31 +1,51 @@
 import uvicorn
 import logging
+import os
+import asyncio
+
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.logger import set_log_level, setup_logging
-from app.middleware.logging import logging_middleware
 from app.config.settings import settings, APP_NAME, APP_VERSION, APP_DESCRIPTION
+from app.middleware.logging import logging_middleware
 from app.infrastructure.database import close_db, health_check_db
 from app.infrastructure.storage import STORAGE_CONN
 from app.infrastructure.redis import REDIS_CONN
 from app.api.v1 import users, auth, roles, oauth, permissions, language, jwt_keys
 
 
-#==================================
 # 创建FastAPI应用
-#==================================
 app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
     description=APP_DESCRIPTION,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    swagger_ui_parameters={
+        "deepLinking": True,
+        "displayRequestDuration": True,
+        "filter": True,
+        "showExtensions": True,
+        "showCommonExtensions": True,
+    },
 )
 
-#==================================
-# 配置打印日志
-#==================================
+# 确保日志配置在应用启动时被正确设置
 setup_logging()
+
+#==================================
+# 注册所有路由器
+#==================================
+app.include_router(users.router, prefix="/api/v1/users", tags=["用户管理"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证管理"])
+app.include_router(roles.router, prefix="/api/v1/roles", tags=["角色管理"])
+app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["权限管理"])
+app.include_router(oauth.router, prefix="/api/v1/oauth", tags=["第三方登录"])
+app.include_router(jwt_keys.router, prefix="/api/v1/jwt", tags=["JWT密钥服务"])
+app.include_router(language.router, prefix="/api/v1/language", tags=["语言管理"])
 
 #==================================
 # 配置中间件
@@ -41,17 +61,6 @@ app.add_middleware(
 
 # 配置日志中间件 - 直接使用全局中间件实例
 app.add_middleware(logging_middleware)
-
-#==================================
-# 注册所有路由器
-#==================================
-app.include_router(users.router, prefix="/api/v1/users", tags=["用户管理"])
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证管理"])
-app.include_router(roles.router, prefix="/api/v1/roles", tags=["角色管理"])
-app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["权限管理"])
-app.include_router(oauth.router, prefix="/api/v1/oauth", tags=["第三方登录"])
-app.include_router(jwt_keys.router, prefix="/api/v1/jwt", tags=["JWT密钥服务"])
-app.include_router(language.router, prefix="/api/v1/language", tags=["语言管理"])
 
 #==================================
 # 初始化基础设施
@@ -108,7 +117,6 @@ async def root():
         "health": "/health",
         "api_base": "/api/v1"
     }
-
 
 # 健康检查
 @app.get("/health")

@@ -29,6 +29,8 @@ async def register_with_password(
             message=I18nService.get_success_message("registration_success", language),
             data={"user_id": user.id, "user_name": user.user_name}
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"密码注册失败: {e}")
         raise HTTPException(
@@ -50,6 +52,8 @@ async def register_with_sms(
             message=I18nService.get_success_message("registration_success", language),
             data={"user_id": user.id, "user_name": user.user_name}
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"短信注册失败: {e}")
         raise HTTPException(
@@ -71,6 +75,8 @@ async def register_with_email(
             message=I18nService.get_success_message("registration_success", language),
             data={"user_id": user.id, "user_name": user.user_name}
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"邮箱注册失败: {e}")
         raise HTTPException(

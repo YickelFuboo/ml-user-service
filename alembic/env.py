@@ -2,7 +2,7 @@ import os
 import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
+from sqlalchemy import create_engine, engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
@@ -28,18 +28,13 @@ config = context.config
 import urllib.parse
 
 if settings.database_type.lower() == "postgresql":
-    # 对密码进行URL编码以处理特殊字符
     encoded_password = urllib.parse.quote_plus(settings.postgresql_password)
-    database_url = f"postgresql+psycopg2://{settings.postgresql_user}:{encoded_password}@{settings.postgresql_host}:{settings.postgresql_port}/{settings.db_name}"
-    print(f"使用PostgreSQL数据库: {settings.postgresql_host}:{settings.postgresql_port}/{settings.db_name}")
+    database_url = f"postgresql+psycopg2://{settings.postgresql_user}:{encoded_password}@{settings.postgresql_host}:{settings.postgresql_port}/{settings.db_name}?client_encoding=utf8"
 elif settings.database_type.lower() == "mysql":
-    # 对密码进行URL编码以处理特殊字符
     encoded_password = urllib.parse.quote_plus(settings.mysql_password)
     database_url = f"mysql+pymysql://{settings.mysql_user}:{encoded_password}@{settings.mysql_host}:{settings.mysql_port}/{settings.db_name}"
-    print(f"使用MySQL数据库: {settings.mysql_host}:{settings.mysql_port}/{settings.db_name}")
 else:
     database_url = "sqlite:///./user_service.db"
-    print("使用SQLite数据库")
 
 config.set_main_option("sqlalchemy.url", database_url)
 
@@ -89,10 +84,14 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    url = config.get_main_option("sqlalchemy.url")
+    connect_args = {}
+    if url and "postgresql" in url:
+        connect_args["options"] = "-c client_encoding=UTF8"
+    connectable = create_engine(
+        url,
         poolclass=pool.NullPool,
+        connect_args=connect_args,
     )
 
     with connectable.connect() as connection:
