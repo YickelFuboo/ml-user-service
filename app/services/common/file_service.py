@@ -101,6 +101,37 @@ class FileService:
             return None
 
     @staticmethod
+    async def get_file_content(file_id: str, file_type: FileType) -> Optional[tuple[bytes, str]]:
+        """
+        获取文件二进制内容及 Content-Type
+
+        Returns:
+            tuple[bytes, str]: (文件字节, content_type)，失败返回 None
+        """
+        try:
+            if file_type not in FileService.FILE_TYPE_CONFIG:
+                logging.error(f"不支持的文件类型: {file_type}")
+                return None
+            
+            config = FileService.FILE_TYPE_CONFIG[file_type]
+            data = await STORAGE_CONN.get(
+                file_index=file_id,
+                bucket_name=config["bucket"]
+            )
+            if not data:
+                return None
+            content = data.read()
+            metadata = await STORAGE_CONN.get_metadata(
+                file_index=file_id,
+                bucket_name=config["bucket"]
+            )
+            content_type = (metadata or {}).get("content_type") or "image/jpeg"
+            return (content, content_type)
+        except Exception as e:
+            logging.error(f"获取文件内容失败: {e}")
+            return None
+
+    @staticmethod
     async def get_file_url(file_id: str, file_type: FileType, expires_in: Optional[int] = None) -> Optional[str]:
         """
         获取文件URL

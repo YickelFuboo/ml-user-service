@@ -2,6 +2,7 @@ import io
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database.factory import get_db
 from app.models.user import User
@@ -303,14 +304,14 @@ async def upload_avatar(
             detail=I18nService.get_error_message("server_error", language)
         )
 
-@router.get("/{user_id}/avatar", response_model=BaseResponse)
+@router.get("/{user_id}/avatar")
 async def get_user_avatar(
     user_id: str,
     language: str = Depends(get_request_language),
     current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db)
 ):
-    """获取用户头像URL"""
+    """获取用户头像（直接返回图片二进制数据）"""
     try:
         if user_id != current_user.id:
             raise HTTPException(
@@ -324,26 +325,22 @@ async def get_user_avatar(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=I18nService.get_error_message("user_not_found", language)
             )
-        
         if not user.avatar:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=I18nService.get_error_message("user_not_set_avatar", language)
             )
-        
-        # 获取头像URL
-        avatar_url = await FileService.get_file_url(user.avatar, FileType.AVATAR)
-        if not avatar_url:
+
+        result = await FileService.get_file_content(user.avatar, FileType.AVATAR)
+        if not result:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=I18nService.get_error_message("avatar_url_generation_failed", language)
             )
-        
-        return BaseResponse(
-            success=True,
-            message=I18nService.get_success_message("avatar_get_success", language),
-            data={"avatar_url": avatar_url}
-        )
+        content, content_type = result
+        return Response(content=content, media_type=content_type)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
