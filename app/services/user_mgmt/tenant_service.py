@@ -5,7 +5,8 @@ import logging
 from sqlalchemy import select, update, delete, and_, or_, func
 from sqlalchemy.orm import selectinload
 import uuid
-from app.models import Tenant, tenant_members
+from app.models.tenant import Tenant, tenant_members
+
 
 class TenantService:
     """租户管理服务"""
@@ -32,7 +33,7 @@ class TenantService:
             if existing_tenant.scalar_one_or_none():
                 raise ValueError("租户名称已存在")
             
-            tenant_id = str(uuid.uuid4()).replace("-", "")
+            tenant_id = str(uuid.uuid4())
             tenant = Tenant(
                 id=tenant_id,
                 name=name,
@@ -283,6 +284,7 @@ class TenantService:
             )
             
             if result.rowcount == 0:
+                await session.rollback()
                 raise ValueError("用户不是租户成员")
             
             # 更新成员数量
@@ -295,6 +297,8 @@ class TenantService:
             await session.commit()
             logging.info(f"移除租户成员成功: {tenant_id} - {user_id}")
             
+        except ValueError:
+            raise
         except Exception as e:
             await session.rollback()
             logging.error(f"移除租户成员失败: {e}")

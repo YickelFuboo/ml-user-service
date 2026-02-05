@@ -1,8 +1,10 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
-from app.constants.common import TenantConstants
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.api.deps import get_current_active_user
+from app.constants.common import TENANT_NAME_MAX_LENGTH, TENANT_DESCRIPTION_MAX_LENGTH
 from app.infrastructure.database import get_db
+from app.models.user import User
 from app.schemes.tenant import (
     TenantRequest,
     ListTenantRequest,
@@ -21,11 +23,11 @@ router = APIRouter(prefix="/api/tenants", tags=["租户管理"])
 @router.post("/create", response_model=CreateTenantResponse)
 async def create_tenant(
     request: TenantRequest,
-    user_id: str = Query(..., description="用户ID"),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db)
 ):
     """创建租户"""
-    try:
+    try:        
         # 验证租户名称
         if not request.name.strip():
             raise HTTPException(
@@ -33,13 +35,12 @@ async def create_tenant(
                 detail={"message": "租户名称不能为空"}
             )
         
-        if len(request.name.encode("utf-8")) > TenantConstants.TENANT_NAME_MAX_LENGTH:
+        if len(request.name.encode("utf-8")) > TENANT_NAME_MAX_LENGTH:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"message": "租户名称长度不能超过128字节"}
             )
-
-        if request.description and len(request.description.encode("utf-8")) > TenantConstants.TENANT_DESCRIPTION_MAX_LENGTH:
+        if request.description and len(request.description.encode("utf-8")) > TENANT_DESCRIPTION_MAX_LENGTH:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"message": "租户描述长度不能超过1000字节"}
@@ -50,7 +51,7 @@ async def create_tenant(
             session=session,
             name=request.name.strip(),
             description=request.description,
-            owner_id=user_id
+            owner_id=current_user.id
         )
         
         return CreateTenantResponse(tenant_id=tenant.id)
@@ -66,7 +67,7 @@ async def create_tenant(
 async def update_tenant(
     tenant_id: str,
     request: TenantRequest,
-    user_id: str = Query(..., description="用户ID"),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db)
 ):
     """更新租户信息"""
@@ -78,16 +79,16 @@ async def update_tenant(
                 detail={"message": "租户名称不能为空"}
             )
         
-        if len(request.name.encode("utf-8")) > TenantConstants.TENANT_NAME_MAX_LENGTH:
+        if len(request.name.encode("utf-8")) > TENANT_NAME_MAX_LENGTH:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"message": "租户名称长度不能超过128字节"}
+                detail={"message": "租户名称长度不能超过255字节"}
             )
         
-        if request.description and len(request.description.encode("utf-8")) > TenantConstants.TENANT_DESCRIPTION_MAX_LENGTH:
+        if request.description and len(request.description.encode("utf-8")) > TENANT_DESCRIPTION_MAX_LENGTH:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"message": "租户描述长度不能超过1000字节"}
+                detail={"message": "租户描述长度不能超过255字节"}
             )
         
         # 更新租户
@@ -96,7 +97,7 @@ async def update_tenant(
             tenant_id=tenant_id,
             name=request.name.strip(),
             description=request.description,
-            user_id=user_id
+            user_id=current_user.id
         )
         
         return {"message": "租户更新成功"}
@@ -111,7 +112,7 @@ async def update_tenant(
 @router.post("/delete/{tenant_id}")
 async def delete_tenant(
     tenant_id: str,
-    user_id: str = Query(..., description="用户ID"),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db)
 ):
     """删除租户"""
@@ -120,7 +121,7 @@ async def delete_tenant(
         await TenantService.delete_tenant(
             session=session,
             tenant_id=tenant_id,
-            user_id=user_id
+            user_id=current_user.id
         )
         
         return {"message": "租户删除成功"}
@@ -135,7 +136,7 @@ async def delete_tenant(
 @router.post("/list", response_model=ListTenantResponse)
 async def list_tenants(
     list_request: ListTenantRequest,
-    user_id: str = Query(..., description="用户ID"),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db)
 ):
     """获取租户列表"""
@@ -143,7 +144,7 @@ async def list_tenants(
         # 获取租户列表
         tenants, total_count = await TenantService.list_tenants(
             session=session,
-            owner_id=user_id,
+            owner_id=current_user.id,
             page_number=list_request.page_number,
             items_per_page=list_request.items_per_page,
             order_by=list_request.order_by,
@@ -171,7 +172,7 @@ async def list_tenants(
 @router.get("/detail/{tenant_id}", response_model=TenantDetailResponse)
 async def get_tenant_detail(
     tenant_id: str,
-    user_id: str = Query(..., description="用户ID"),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db)
 ):
     """获取租户详情"""
@@ -185,7 +186,7 @@ async def get_tenant_detail(
             )
         
         # 检查权限
-        if tenant.owner_id != user_id:
+        if tenant.owner_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"message": "无权限操作此租户"}
@@ -204,7 +205,7 @@ async def get_tenant_detail(
 async def add_tenant_members(
     tenant_id: str,
     request: MembersRequest,
-    user_id: str = Query(..., description="用户ID"),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db)
 ):
     """添加租户成员"""
@@ -226,12 +227,12 @@ async def add_tenant_members(
                     session=session,
                     tenant_id=tenant_id,
                     member_id=member_id,
-                    user_id=user_id
+                    user_id=current_user.id
                 )
                 success_count += 1
             except Exception as e:
                 failed_count += 1
-                logging.error(f"添加租户成员失败: {tenant_id} - {user_id} - {e}")
+                logging.error(f"添加租户成员失败: {tenant_id} - {current_user.id} - {e}")
         
         if failed_count == 0:
             message = f"成功添加 {success_count} 个成员"
@@ -254,7 +255,7 @@ async def add_tenant_members(
 async def remove_tenant_members(
     tenant_id: str,
     request: MembersRequest,
-    user_id: str = Query(..., description="用户ID"),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db)
 ):
     """移除租户成员"""
@@ -276,12 +277,12 @@ async def remove_tenant_members(
                     session=session,
                     tenant_id=tenant_id,
                     member_id=member_id,
-                    user_id=user_id
+                    user_id=current_user.id
                 )
                 success_count += 1
             except Exception as e:
                 failed_count += 1
-                logging.error(f"移除租户成员失败: {tenant_id} - {user_id} - {e}")
+                logging.error(f"移除租户成员失败: {tenant_id} - {current_user.id} - {e}")
         
         if failed_count == 0:
             message = f"成功移除 {success_count} 个成员"
@@ -304,7 +305,7 @@ async def remove_tenant_members(
 async def change_tenant_owner(
     tenant_id: str,
     request: ChangeOwnerRequest,
-    user_id: str = Query(..., description="用户ID"),
+    current_user: User = Depends(get_current_active_user),
     session: AsyncSession = Depends(get_db)
 ):
     """修改租户Owner"""
@@ -314,7 +315,7 @@ async def change_tenant_owner(
             session=session,
             tenant_id=tenant_id,
             new_owner_id=request.new_owner_id,
-            current_owner_id=user_id
+            current_owner_id=current_user.id
         )
         
         return TenantOperationResponse(

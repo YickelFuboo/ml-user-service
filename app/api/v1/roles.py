@@ -48,6 +48,7 @@ async def get_roles(
 ):
     """获取角色列表"""
     try:
+        # 验证用户ID
         result = await RoleService.get_roles(session, pagination)
         return result
     except Exception as e:

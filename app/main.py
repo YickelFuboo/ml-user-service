@@ -13,7 +13,7 @@ from app.middleware.logging import logging_middleware
 from app.infrastructure.database import close_db, health_check_db
 from app.infrastructure.storage import STORAGE_CONN
 from app.infrastructure.redis import REDIS_CONN
-from app.api.v1 import users, auth, roles, oauth, permissions, language, jwt_keys
+from app.api.v1 import users, auth, roles, oauth, permissions, language, jwt_keys, tenant
 
 
 # 创建FastAPI应用
@@ -46,6 +46,7 @@ app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["权�
 app.include_router(oauth.router, prefix="/api/v1/oauth", tags=["第三方登录"])
 app.include_router(jwt_keys.router, prefix="/api/v1/jwt", tags=["JWT密钥服务"])
 app.include_router(language.router, prefix="/api/v1/language", tags=["语言管理"])
+app.include_router(tenant.router, prefix="/api/v1/tenant", tags=["租户管理"])
 
 #==================================
 # 配置中间件
