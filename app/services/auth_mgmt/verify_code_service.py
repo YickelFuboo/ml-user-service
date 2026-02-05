@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 import string
@@ -66,7 +67,7 @@ class VerifyCodeService:
         
         # 存储到Redis，设置过期时间
         expire_seconds = expires_in_minutes * 60 + 300  # 额外5分钟缓冲
-        success = await REDIS_CONN.set(redis_key, verification_data, expire=expire_seconds)
+        success = await REDIS_CONN.set_obj(redis_key, verification_data, exp=expire_seconds)
         
         if success:
             logging.info(f"创建验证码到Redis: {identifier}, 类型: {code_type}, 用途: {purpose}")
@@ -195,13 +196,11 @@ class VerifyCodeService:
         try:
             # 生成Redis键
             redis_key = VerifyCodeService._generate_redis_key(identifier, code_type, purpose)
-            verification_data = await REDIS_CONN.get(redis_key)
-            
-            if not verification_data:
+            raw = await REDIS_CONN.get(redis_key)
+            if not raw:
                 logging.warning(f"验证码不存在或已过期: {identifier}, 类型: {code_type}")
                 return False
-            
-            # 检查是否已使用
+            verification_data = json.loads(raw)
             if verification_data.get("is_used", False):
                 logging.warning(f"验证码已使用: {identifier}")
                 return False
@@ -225,14 +224,12 @@ class VerifyCodeService:
             
             # 验证验证码
             if verification_data["code"] == code:
-                # 验证成功，标记为已使用
                 verification_data["is_used"] = True
-                await REDIS_CONN.set(redis_key, verification_data)
+                await REDIS_CONN.set_obj(redis_key, verification_data, exp=3600)
                 logging.info(f"验证码验证成功: {identifier}")
                 return True
             else:
-                # 验证失败，更新尝试次数
-                await REDIS_CONN.set(redis_key, verification_data)
+                await REDIS_CONN.set_obj(redis_key, verification_data, exp=3600)
                 logging.warning(f"验证码错误: {identifier}, 尝试次数: {attempts}")
                 return False
             
@@ -247,21 +244,21 @@ class VerifyCodeService:
             # 使用Redis计数器检查频率限制
             # 1分钟内限制
             one_minute_key = f"rate_limit:{identifier}:{code_type}:1min"
-            one_minute_count = await REDIS_CONN.get(one_minute_key, 0)
+            raw_min = await REDIS_CONN.get(one_minute_key)
+            one_minute_count = int(raw_min) if raw_min else 0
             if one_minute_count >= 1:
                 logging.warning(f"1分钟内频率限制: {identifier}")
                 return False
-            
-            # 1小时内限制
             one_hour_key = f"rate_limit:{identifier}:{code_type}:1hour"
-            one_hour_count = await REDIS_CONN.get(one_hour_key, 0)
+            raw_hour = await REDIS_CONN.get(one_hour_key)
+            one_hour_count = int(raw_hour) if raw_hour else 0
             if one_hour_count >= 10:
                 logging.warning(f"1小时内频率限制: {identifier}")
                 return False
             
             # 更新计数器（使用原子操作）
-            await REDIS_CONN.set(one_minute_key, 1, expire=60)  # 1分钟过期
-            await REDIS_CONN.set(one_hour_key, one_hour_count + 1, expire=3600)   # 1小时过期
+            await REDIS_CONN.set(one_minute_key, 1, exp=60)  # 1分钟过期
+            await REDIS_CONN.set(one_hour_key, one_hour_count + 1, exp=3600)   # 1小时过期
             
             return True
             

@@ -128,19 +128,17 @@ class OAuthService:
             "used": False
         }
         redis_key = OAuthService._generate_redis_key(state)
-        await REDIS_CONN.set(redis_key, state_data, expire=300)
+        await REDIS_CONN.set_obj(redis_key, state_data, exp=300)
         return state
     
     @staticmethod
     async def _get_and_consume_state(state: str) -> bool:
         """获取并消费state参数"""
         redis_key = OAuthService._generate_redis_key(state)
-        state_data = await REDIS_CONN.get(redis_key)
-        
-        if state_data is None:
+        raw = await REDIS_CONN.get(redis_key)
+        if raw is None:
             return False
-        
-        # 检查是否已使用
+        state_data = json.loads(raw)
         if state_data.get("used", False):
             return False
         

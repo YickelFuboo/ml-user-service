@@ -89,7 +89,7 @@ async def refresh_token(
 ):
     """刷新访问令牌"""
     try:
-        result = await AuthService.refresh_token(session, refresh_data.refresh_token)
+        result = await AuthService.refresh_token(session, refresh_data)
         return result
     except HTTPException:
         raise
@@ -101,14 +101,20 @@ async def refresh_token(
 
 @router.post("/logout", response_model=BaseResponse)
 async def logout(
+    user_id: str,
     current_user: User = Depends(get_current_active_user),
     token: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     language: str = Depends(get_request_language),
-    session: AsyncSession = Depends(get_db)
 ):
     """用户登出"""
     try:
-        result = await AuthService.logout(session, current_user, token.credentials)
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=I18nService.get_error_message("forbidden", language)
+            )
+
+        result = await AuthService.logout(current_user, token.credentials)
         
         if result["success"]:
             return BaseResponse(

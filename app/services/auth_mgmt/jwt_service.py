@@ -117,12 +117,12 @@ class JWTService:
             # 生成Redis键
             redis_key = JWTService._generate_redis_key(token)
             
-            # 存储令牌到Redis，设置过期时间
-            success = await REDIS_CONN.set(redis_key, {
+            # 存储令牌到Redis，设置过期时间（使用 set_obj 序列化 dict）
+            success = await REDIS_CONN.set_obj(redis_key, {
                 "token": token,
                 "added_at": current_time.isoformat(),
                 "expires_at": expires_at.isoformat()
-            }, expire=expire_seconds)
+            }, exp=expire_seconds)
             
             if success:
                 logging.info(f"令牌已添加到Redis黑名单，过期时间: {expires_at}")
