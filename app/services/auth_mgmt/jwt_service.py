@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.config import settings
+from app.config.settings import settings
 from app.models.user import User
 from app.infrastructure.redis.factory import REDIS_CONN
 from app.constants.common import TOKEN_BLACKLIST_PREFIX
@@ -23,25 +23,33 @@ class JWTService:
     @staticmethod
     async def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         """创建访问令牌"""
-        to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.utcnow() + timedelta(minutes=settings.jwt_access_token_expire_minutes)
+        try:
+            to_encode = data.copy()
+            if expires_delta:
+                expire = datetime.utcnow() + expires_delta
+            else:
+                expire = datetime.utcnow() + timedelta(minutes=settings.jwt_access_token_expire_minutes)
+            
+            to_encode.update({"exp": expire, "type": "access"})
+            encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
         
-        to_encode.update({"exp": expire, "type": "access"})
-        encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
-        return encoded_jwt
+            return encoded_jwt
+        except Exception as e:
+            logging.error(f"创建访问令牌失败: {e}")
+            return None
     
     @staticmethod
     async def create_refresh_token(data: dict):
         """创建刷新令牌"""
-        to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(days=settings.jwt_refresh_token_expire_days)
-        
-        to_encode.update({"exp": expire, "type": "refresh"})
-        encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
-        return encoded_jwt
+        try:
+            to_encode = data.copy()
+            expire = datetime.utcnow() + timedelta(days=settings.jwt_refresh_token_expire_days)
+            to_encode.update({"exp": expire, "type": "refresh"})
+            encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+            return encoded_jwt
+        except Exception as e:
+            logging.error(f"创建刷新令牌失败: {e}")
+            return None
     
     @staticmethod
     async def verify_token(token: str) -> Optional[dict]:

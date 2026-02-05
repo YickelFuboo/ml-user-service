@@ -233,21 +233,21 @@ class UserService:
             user = User(
                 id=str(uuid.uuid4()),
                 user_name=user_data.get("user_name"),
-                email=user_data.get("email", None),
-                phone=user_data.get("phone", None),
-                hashed_password=user_data.get("hashed_password", None),
-                user_full_name=user_data.get("user_full_name", None),
-                avatar=user_data.get("avatar", None),
-                language=user_data.get("language", get_default_language()),  # 使用默认语言
+                email=user_data.get("email") or None,
+                phone=user_data.get("phone") or None,
+                hashed_password=user_data.get("hashed_password") or None,
+                user_full_name=user_data.get("user_full_name") or None,
+                avatar=user_data.get("avatar") or None,
+                language=user_data.get("language") or get_default_language(),
                 is_active=user_data.get("is_active", True),
                 is_superuser=user_data.get("is_superuser", False),
                 email_verified=user_data.get("email_verified", False),
                 phone_verified=user_data.get("phone_verified", False),
                 registration_method=registration_method,
-                github_id=user_data.get("github_id", None),
-                google_id=user_data.get("google_id", None),
-                wechat_id=user_data.get("wechat_id", None),
-                alipay_id=user_data.get("alipay_id", None),
+                github_id=user_data.get("github_id") or None,
+                google_id=user_data.get("google_id") or None,
+                wechat_id=user_data.get("wechat_id") or None,
+                alipay_id=user_data.get("alipay_id") or None,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow()
             )
@@ -437,11 +437,11 @@ class UserService:
         total_pages = (total + pagination.page_size - 1) // pagination.page_size
         
         return PaginatedResponse(
+            data=user_responses,
             total=total,
             page=pagination.page,
-            page_size=pagination.page_size,
-            total_pages=total_pages,
-            items=user_responses
+            size=pagination.page_size,
+            pages=total_pages
         )
     
     @staticmethod
@@ -590,10 +590,20 @@ class UserService:
             user = await UserService.get_user_by_id(session, user_id)
             if not user:
                 return False
-            
+
+            # 只有通过密码登录的用户才能修改密码
+            if user.registration_method != "password":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="只有通过密码登录的用户才能修改密码"
+                )
+
             # 验证旧密码
             if not PasswordService.verify_password(old_password, user.hashed_password):
-                return False
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="旧密码错误"
+                )
             
             # 更新密码
             user.hashed_password = PasswordService.hash_password(new_password)

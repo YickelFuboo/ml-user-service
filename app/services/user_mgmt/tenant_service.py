@@ -36,7 +36,7 @@ class TenantService:
             tenant = Tenant(
                 id=tenant_id,
                 name=name,
-                description=description,
+                description=description or None,
                 owner_id=owner_id,
                 member_count=1
             )

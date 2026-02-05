@@ -38,7 +38,7 @@ async def register_with_password(
             detail=I18nService.get_error_message("server_error", language)
         )
 
-@router.post("/register/sms", response_model=BaseResponse)
+@router.post("/register/phone-code", response_model=BaseResponse)
 async def register_with_sms(
     register_data: SmsRegister,
     language: str = Depends(get_request_language),
@@ -61,7 +61,7 @@ async def register_with_sms(
             detail=I18nService.get_error_message("server_error", language)
         )
 
-@router.post("/register/email", response_model=BaseResponse)
+@router.post("/register/email-code", response_model=BaseResponse)
 async def register_with_email(
     register_data: EmailRegister,
     language: str = Depends(get_request_language),
@@ -110,16 +110,23 @@ async def get_user(
 ):
     """获取用户详情"""
     try:
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=I18nService.get_error_message("forbidden", language)
+            )
+        
         user = await UserService.get_user_by_id(session, user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=I18nService.get_error_message("user_not_found", language)
             )
+        
         return BaseResponse(
             success=True,
-            message=I18nService.get_success_message("user_updated", language),
-            data=user
+            message=I18nService.get_success_message("get_user_success", language),
+            data=UserResponse.model_validate(user)
         )
     except Exception as e:
         logging.error(f"获取用户详情失败 - 用户ID: {user_id}, 错误: {e}")
@@ -138,16 +145,23 @@ async def update_user(
 ):
     """更新用户"""
     try:
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=I18nService.get_error_message("forbidden", language)
+            )
+
         user = await UserService.update_user(session, user_id, user_data)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=I18nService.get_error_message("user_not_found", language)
             )
+    
         return BaseResponse(
             success=True,
             message=I18nService.get_success_message("user_updated", language),
-            data={"user_id": user.id}
+            data=UserResponse.model_validate(user)
         )
     except Exception as e:
         logging.error(f"更新用户失败 - 用户ID: {user_id}, 错误: {e}")
@@ -164,13 +178,20 @@ async def delete_user(
     session: AsyncSession = Depends(get_db)
 ):
     """删除用户"""
-    try:
+    try:    
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=I18nService.get_error_message("forbidden", language)
+            )
+
         success = await UserService.delete_user(session, user_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=I18nService.get_error_message("user_not_found", language)
             )
+
         return BaseResponse(
             success=True,
             message=I18nService.get_success_message("user_deleted", language)
@@ -184,6 +205,7 @@ async def delete_user(
 
 @router.post("/change-password", response_model=BaseResponse)
 async def change_password(
+    user_id: str,
     password_data: UserPasswordChange,
     language: str = Depends(get_request_language),
     current_user: User = Depends(get_current_active_user),
@@ -191,9 +213,15 @@ async def change_password(
 ):
     """修改密码"""
     try:
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=I18nService.get_error_message("forbidden", language)
+            )
+
         success = await UserService.change_password(
             session,
-            current_user.id,
+            user_id,
             password_data.old_password,
             password_data.new_password
         )
@@ -215,6 +243,7 @@ async def change_password(
 
 @router.post("/upload-avatar", response_model=BaseResponse)
 async def upload_avatar(
+    user_id: str,
     file: UploadFile = File(...),
     language: str = Depends(get_request_language),
     current_user: User = Depends(get_current_active_user),
@@ -222,6 +251,12 @@ async def upload_avatar(
 ):
     """上传头像"""
     try:
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=I18nService.get_error_message("forbidden", language)
+            )
+
         # 读取文件内容
         file_content = io.BytesIO()
         for chunk in file.file:
@@ -233,7 +268,7 @@ async def upload_avatar(
             file_data=file_content,
             filename=file.filename,
             file_type=FileType.AVATAR,
-            user_id=current_user.id
+            user_id=user_id
         )
         
         if not file_id:
@@ -251,7 +286,7 @@ async def upload_avatar(
             )
         
         # 更新用户头像信息
-        user = await UserService.get_user_by_id(session, current_user.id)
+        user = await UserService.get_user_by_id(session, user_id)
         if user:
             # 存储file_id到数据库
             user.avatar = file_id
@@ -277,6 +312,12 @@ async def get_user_avatar(
 ):
     """获取用户头像URL"""
     try:
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=I18nService.get_error_message("forbidden", language)
+            )
+
         user = await UserService.get_user_by_id(session, user_id)
         if not user:
             raise HTTPException(

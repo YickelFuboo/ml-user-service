@@ -28,7 +28,7 @@ class RoleService:
         role = Role(
             id=str(uuid.uuid4()),
             name=role_data.name,
-            description=role_data.description
+            description=role_data.description or None
         )
         
         session.add(role)

@@ -4,7 +4,7 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
-from app.config import settings
+from app.config.settings import settings
 from app.infrastructure.redis.factory import REDIS_CONN
 from app.constants.common import (
     VERIFICATION_CODE_LENGTH,

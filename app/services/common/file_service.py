@@ -2,6 +2,7 @@ import os
 import uuid
 import io
 import logging
+from enum import Enum
 from PIL import Image
 from datetime import datetime
 from typing import Optional, BinaryIO
@@ -10,7 +11,7 @@ from app.infrastructure.storage.factory import STORAGE_CONN
 from app.constants.common import AVATAR_MAX_SIZE_KB, AVATAR_IMAGE_TYPES
 
 
-class FileType:
+class FileType(str, Enum):
     AVATAR = "avatar"
 
 
@@ -45,11 +46,11 @@ class FileService:
         """
         try:
             # 验证文件类型
-            if file_type.value not in FileService.FILE_TYPE_CONFIG:
-                logging.error(f"不支持的文件类型: {file_type.value}")
+            if file_type not in FileService.FILE_TYPE_CONFIG:
+                logging.error(f"不支持的文件类型: {file_type}")
                 return None
             
-            config = FileService.FILE_TYPE_CONFIG[file_type.value] # 获取文件类型配置
+            config = FileService.FILE_TYPE_CONFIG[file_type]  # 获取文件类型配置
             
             # 验证文件扩展名（如果配置了允许的扩展名）
             if config["allowed_extensions"]:
@@ -68,6 +69,8 @@ class FileService:
             # 处理图片（如果需要且是图片文件）
             if config["process_image"] and FileService._is_image_file(file_ext):
                 file_data = FileService._process_image(file_data, config["max_dimensions"])
+                # 统一转为 JPEG，更新扩展名用于 content_type
+                file_ext = ".jpg"
             
             # 准备元数据
             metadata = {
@@ -111,11 +114,11 @@ class FileService:
             str: 文件访问URL
         """
         try:
-            if file_type.value not in FileService.FILE_TYPE_CONFIG:
-                logging.error(f"不支持的文件类型: {file_type.value}")
+            if file_type not in FileService.FILE_TYPE_CONFIG:
+                logging.error(f"不支持的文件类型: {file_type}")
                 return None
                 
-            config = FileService.FILE_TYPE_CONFIG[file_type.value]
+            config = FileService.FILE_TYPE_CONFIG[file_type]
             url = await STORAGE_CONN.get_url(
                 file_index=file_id,
                 bucket_name=config["bucket"],
@@ -139,11 +142,11 @@ class FileService:
             bool: 是否删除成功
         """
         try:
-            if file_type.value not in FileService.FILE_TYPE_CONFIG:
-                logging.error(f"不支持的文件类型: {file_type.value}")
+            if file_type not in FileService.FILE_TYPE_CONFIG:
+                logging.error(f"不支持的文件类型: {file_type}")
                 return False
-                
-            config = FileService.FILE_TYPE_CONFIG[file_type.value]
+            
+            config = FileService.FILE_TYPE_CONFIG[file_type]
             success = await STORAGE_CONN.delete(
                 file_index=file_id,
                 bucket_name=config["bucket"]
@@ -198,9 +201,11 @@ class FileService:
             # 调整大小（保持宽高比）
             image.thumbnail(max_dimensions, Image.Resampling.LANCZOS)
             
-            # 转换为JPEG格式
+            # 转换为JPEG格式（先转 RGB 以处理带 alpha 的 PNG/WebP 等）
             output = io.BytesIO()
-            image.save(output, format='JPEG', quality=85, optimize=True)
+            if image.mode not in ("RGB", "L"):
+                image = image.convert("RGB")
+            image.save(output, format="JPEG", quality=85, optimize=True)
             output.seek(0)
             
             return output

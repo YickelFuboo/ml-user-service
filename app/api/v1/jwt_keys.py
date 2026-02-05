@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
-from app.config import settings
+from app.config.settings import settings
 from app.schemes.common import BaseResponse
 from app.services.auth_mgmt.jwt_service import JWTService
 from app.infrastructure.redis.factory import REDIS_CONN

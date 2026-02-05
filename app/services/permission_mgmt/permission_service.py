@@ -22,7 +22,7 @@ class PermissionService:
             permission = Permission(
                 id=str(uuid.uuid4()),
                 name=permission_data.name,
-                description=permission_data.description,
+                description=permission_data.description or None,
                 resource=permission_data.resource,
                 action=permission_data.action,
                 is_active=True

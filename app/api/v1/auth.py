@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemes.auth import (
     LoginResponse, RefreshTokenRequest, RefreshTokenResponse,
@@ -14,7 +14,7 @@ from app.models.user import User
 from app.services.auth_mgmt.auth_service import AuthService
 from app.services.auth_mgmt.verify_code_service import VerifyCodeService
 from app.services.common.email_service import EmailService
-from app.api.deps import get_current_active_user, oauth2_scheme, get_request_language
+from app.api.deps import get_current_active_user, bearer_scheme, get_request_language
 from app.constants.common import VERIFICATION_CODE_EXPIRE_MINUTES
 from app.services.common.i18n_service import I18nService
 
@@ -42,7 +42,7 @@ async def login_with_password(
         )
 
 
-@router.post("/login/sms", response_model=LoginResponse)
+@router.post("/login/phone-code", response_model=LoginResponse)
 async def login_with_sms(
     login_data: SmsLogin,
     request: Request,
@@ -62,7 +62,7 @@ async def login_with_sms(
         )
 
 
-@router.post("/login/email", response_model=LoginResponse)
+@router.post("/login/email-code", response_model=LoginResponse)
 async def login_with_email(
     login_data: EmailLogin,
     request: Request,
@@ -102,13 +102,13 @@ async def refresh_token(
 @router.post("/logout", response_model=BaseResponse)
 async def logout(
     current_user: User = Depends(get_current_active_user),
-    token: str = Depends(oauth2_scheme),
+    token: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     language: str = Depends(get_request_language),
     session: AsyncSession = Depends(get_db)
 ):
     """用户登出"""
     try:
-        result = await AuthService.logout(session, current_user, token)
+        result = await AuthService.logout(session, current_user, token.credentials)
         
         if result["success"]:
             return BaseResponse(

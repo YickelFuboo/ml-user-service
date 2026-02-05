@@ -20,6 +20,7 @@ class I18nService:
             
             # 用户相关
             "user_created": "用户创建成功",
+            "get_user_success": "获取用户成功",
             "user_updated": "用户信息更新成功",
             "user_deleted": "用户删除成功",
             "user_not_found": "用户不存在",
@@ -32,6 +33,8 @@ class I18nService:
             "password_changed": "密码修改成功",
             "email_verified": "邮箱验证成功",
             "phone_verified": "手机号验证成功",
+            "user_not_set_avatar": "用户未设置头像",
+            "avatar_url_generation_failed": "头像URL生成失败",
             
             # 角色权限相关
             "role_created": "角色创建成功",
@@ -90,6 +93,7 @@ class I18nService:
             
             # User related
             "user_created": "User created successfully",
+            "get_user_success": "Get user successfully",
             "user_updated": "User updated successfully",
             "user_deleted": "User deleted successfully",
             "user_not_found": "User not found",
@@ -102,6 +106,8 @@ class I18nService:
             "password_changed": "Password changed successfully",
             "email_verified": "Email verified successfully",
             "phone_verified": "Phone number verified successfully",
+            "user_not_set_avatar": "User not set avatar",
+            "avatar_url_generation_failed": "Avatar URL generation failed",
             
             # Role and permission related
             "role_created": "Role created successfully",

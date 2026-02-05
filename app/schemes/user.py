@@ -79,5 +79,5 @@ class UserUpdate(BaseModel):
 
 class UserPasswordChange(BaseModel):
     """用户密码修改模型"""
-    current_password: str
+    old_password: str
     new_password: str
