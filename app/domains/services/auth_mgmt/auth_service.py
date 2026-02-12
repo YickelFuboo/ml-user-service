@@ -5,16 +5,16 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.schemes.auth import (
+from app.domains.schemes.auth import (
     LoginResponse, RefreshTokenRequest, RefreshTokenResponse,
     PasswordLogin, SmsLogin, EmailLogin
 )
-from app.schemes.user import UserResponse
-from app.models.user import User
-from app.models.role import Role, UserInRole
-from app.services.auth_mgmt.jwt_service import JWTService
-from app.services.auth_mgmt.password_service import PasswordService
-from app.services.auth_mgmt.verify_code_service import VerifyCodeService
+from app.domains.schemes.user import UserResponse
+from app.domains.models.user import User
+from app.domains.models.role import Role, UserInRole
+from app.domains.services.auth_mgmt.jwt_service import JWTService
+from app.domains.services.auth_mgmt.password_service import PasswordService
+from app.domains.services.auth_mgmt.verify_code_service import VerifyCodeService
 
 
 class AuthService:

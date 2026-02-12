@@ -4,11 +4,11 @@ from typing import List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func
-from app.schemes.common import PaginationParams, PaginatedResponse
-from app.models.role import Role, UserInRole
-from app.models.user import User
-from app.schemes.role import RoleBase
-from app.schemes.user import UserResponse
+from app.domains.schemes.common import PaginationParams, PaginatedResponse
+from app.domains.models.role import Role, UserInRole
+from app.domains.models.user import User
+from app.domains.schemes.role import RoleBase
+from app.domains.schemes.user import UserResponse
 
 
 class RoleService:

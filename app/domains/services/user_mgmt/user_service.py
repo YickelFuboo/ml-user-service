@@ -9,10 +9,10 @@ from PIL import Image
 from sqlalchemy import or_, and_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
-from app.schemes.common import PaginationParams, PaginatedResponse
-from app.schemes.user import UserUpdate, UserResponse, PasswordRegister, SmsRegister, EmailRegister
-from app.models.user import User
-from app.models.role import Role, UserInRole
+from app.domains.schemes.common import PaginationParams, PaginatedResponse
+from app.domains.schemes.user import UserUpdate, UserResponse, PasswordRegister, SmsRegister, EmailRegister
+from app.domains.models.user import User
+from app.domains.models.role import Role, UserInRole
 from app.constants.language import get_default_language
 from app.constants.common import (
     PASSWORD_MIN_LENGTH,
@@ -22,12 +22,12 @@ from app.constants.common import (
     PHONE_MAX_LENGTH,
     NICKNAME_MAX_LENGTH
 )
-from app.services.common.email_service import EmailService
-from app.services.common.sms_service import SMSService
-from app.services.common.file_service import FileService, FileType
-from app.services.auth_mgmt.password_service import PasswordService
-from app.services.auth_mgmt.verify_code_service import VerifyCodeService
-from app.services.permission_mgmt.role_service import RoleService
+from app.domains.services.common.email_service import EmailService
+from app.domains.services.common.sms_service import SMSService
+from app.domains.services.common.file_service import FileService, FileType
+from app.domains.services.auth_mgmt.password_service import PasswordService
+from app.domains.services.auth_mgmt.verify_code_service import VerifyCodeService
+from app.domains.services.permission_mgmt.role_service import RoleService
 
 class UserService:
     """用户服务：注册、注销、修改"""

@@ -5,13 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database.factory import get_db
-from app.models.user import User
-from app.api.deps import get_current_active_user, get_request_language
-from app.schemes.common import PaginationParams, PaginatedResponse, BaseResponse
-from app.schemes.user import UserUpdate, UserResponse, UserPasswordChange, PasswordRegister, SmsRegister, EmailRegister
-from app.services.user_mgmt.user_service import UserService
-from app.services.common.file_service import FileService, FileType
-from app.services.common.i18n_service import I18nService
+from app.domains.models.user import User
+from app.domains.api.deps import get_current_active_user, get_request_language
+from app.domains.schemes.common import PaginationParams, PaginatedResponse, BaseResponse
+from app.domains.schemes.user import UserUpdate, UserResponse, UserPasswordChange, PasswordRegister, SmsRegister, EmailRegister
+from app.domains.services.user_mgmt.user_service import UserService
+from app.domains.services.common.file_service import FileService, FileType
+from app.domains.services.common.i18n_service import I18nService
 
 
 router = APIRouter()

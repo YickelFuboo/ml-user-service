@@ -12,8 +12,8 @@ from app.constants.common import (
     VERIFICATION_CODE_EXPIRE_MINUTES,
     VERIFICATION_CODE_MAX_ATTEMPTS
 )
-from app.services.common.email_service import EmailService
-from app.services.common.sms_service import SMSService
+from app.domains.services.common.email_service import EmailService
+from app.domains.services.common.sms_service import SMSService
 
 
 class VerifyCodeService:

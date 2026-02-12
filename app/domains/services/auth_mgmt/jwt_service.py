@@ -7,7 +7,7 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.config.settings import settings
-from app.models.user import User
+from app.domains.models.user import User
 from app.infrastructure.redis.factory import REDIS_CONN
 from app.constants.common import TOKEN_BLACKLIST_PREFIX
 

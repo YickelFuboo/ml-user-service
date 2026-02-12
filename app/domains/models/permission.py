@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Boolean, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from app.models.base import Base, TimestampMixin
+from app.domains.models.base import Base, TimestampMixin
 
 
 class Permission(Base, TimestampMixin):

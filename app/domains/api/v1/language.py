@@ -2,17 +2,17 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database.factory import get_db
-from app.models.user import User
-from app.api.deps import get_current_active_user, get_request_language
-from app.schemes.language import ChangeLanguageRequest
-from app.schemes.common import BaseResponse
+from app.domains.models.user import User
+from app.domains.api.deps import get_current_active_user, get_request_language
+from app.domains.schemes.language import ChangeLanguageRequest
+from app.domains.schemes.common import BaseResponse
 from app.constants.language import (
     get_supported_languages,
     is_supported_language,
     get_default_language
 )
-from app.services.auth_mgmt.jwt_service import JWTService
-from app.services.common.i18n_service import I18nService
+from app.domains.services.auth_mgmt.jwt_service import JWTService
+from app.domains.services.common.i18n_service import I18nService
 
 
 router = APIRouter()

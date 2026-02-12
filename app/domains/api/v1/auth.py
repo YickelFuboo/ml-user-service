@@ -3,20 +3,20 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemes.auth import (
+from app.domains.schemes.auth import (
     LoginResponse, RefreshTokenRequest, RefreshTokenResponse,
     PasswordLogin, SmsLogin, EmailLogin,
     VerificationCodeRequest, VerificationCodeResponse
 )   
-from app.schemes.common import BaseResponse 
+from app.domains.schemes.common import BaseResponse 
 from app.infrastructure.database.factory import get_db
-from app.models.user import User
-from app.services.auth_mgmt.auth_service import AuthService
-from app.services.auth_mgmt.verify_code_service import VerifyCodeService
-from app.services.common.email_service import EmailService
-from app.api.deps import get_current_active_user, bearer_scheme, get_request_language
+from app.domains.models.user import User
+from app.domains.services.auth_mgmt.auth_service import AuthService
+from app.domains.services.auth_mgmt.verify_code_service import VerifyCodeService
+from app.domains.services.common.email_service import EmailService
+from app.domains.api.deps import get_current_active_user, bearer_scheme, get_request_language
 from app.constants.common import VERIFICATION_CODE_EXPIRE_MINUTES
-from app.services.common.i18n_service import I18nService
+from app.domains.services.common.i18n_service import I18nService
 
 
 router = APIRouter()

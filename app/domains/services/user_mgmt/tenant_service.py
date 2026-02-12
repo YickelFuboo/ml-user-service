@@ -5,7 +5,7 @@ import logging
 from sqlalchemy import select, update, delete, and_, or_, func
 from sqlalchemy.orm import selectinload
 import uuid
-from app.models.tenant import Tenant, tenant_members
+from app.domains.models.tenant import Tenant, tenant_members
 
 
 class TenantService:

@@ -1,11 +1,11 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.api.deps import get_current_active_user
+from app.domains.api.deps import get_current_active_user
 from app.constants.common import TENANT_NAME_MAX_LENGTH, TENANT_DESCRIPTION_MAX_LENGTH
 from app.infrastructure.database import get_db
-from app.models.user import User
-from app.schemes.tenant import (
+from app.domains.models.user import User
+from app.domains.schemes.tenant import (
     TenantRequest,
     ListTenantRequest,
     MembersRequest,
@@ -16,7 +16,7 @@ from app.schemes.tenant import (
     CreateTenantResponse,
     TenantOperationResponse
 )
-from app.services.user_mgmt.tenant_service import TenantService
+from app.domains.services.user_mgmt.tenant_service import TenantService
 
 router = APIRouter(prefix="/api/tenants", tags=["租户管理"])
 

@@ -13,12 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 from app.config.settings import settings
 from app.infrastructure.redis.factory import REDIS_CONN
-from app.models.user import User
-from app.services.auth_mgmt.jwt_service import JWTService
-from app.services.auth_mgmt.auth_service import AuthService
-from app.services.auth_mgmt.password_service import PasswordService
-from app.services.auth_mgmt.verify_code_service import VerifyCodeService
-from app.services.user_mgmt.user_service import UserService
+from app.domains.models.user import User
+from app.domains.services.auth_mgmt.jwt_service import JWTService
+from app.domains.services.auth_mgmt.auth_service import AuthService
+from app.domains.services.auth_mgmt.password_service import PasswordService
+from app.domains.services.auth_mgmt.verify_code_service import VerifyCodeService
+from app.domains.services.user_mgmt.user_service import UserService
 
 
 class OAuthService:

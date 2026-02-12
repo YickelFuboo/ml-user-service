@@ -3,8 +3,8 @@ from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database.factory import get_db
-from app.models.user import User
-from app.services.auth_mgmt.jwt_service import JWTService
+from app.domains.models.user import User
+from app.domains.services.auth_mgmt.jwt_service import JWTService
 from app.constants.language import get_default_language, is_supported_language
 
 

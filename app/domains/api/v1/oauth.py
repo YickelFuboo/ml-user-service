@@ -4,11 +4,11 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemes.auth import OAuthLogin, OAuthBind, OIDCLogin
+from app.domains.schemes.auth import OAuthLogin, OAuthBind, OIDCLogin
 from app.infrastructure.database.factory import get_db
-from app.services.auth_mgmt.oauth_service import OAuthService
-from app.api.deps import get_request_language
-from app.services.common.i18n_service import I18nService
+from app.domains.services.auth_mgmt.oauth_service import OAuthService
+from app.domains.api.deps import get_request_language
+from app.domains.services.common.i18n_service import I18nService
 
 
 router = APIRouter()

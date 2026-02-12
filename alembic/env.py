@@ -11,14 +11,14 @@ from alembic import context
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 导入我们的模型
-from app.models.base import Base
+from app.domains.models.base import Base
 from app.config.settings import settings
 
 # 导入所有模型以确保它们被注册到Base.metadata中
-from app.models.user import User, FileMetadata
-from app.models.role import Role, UserInRole
-from app.models.permission import Permission, RolePermission
-from app.models.tenant import Tenant
+from app.domains.models.user import User, FileMetadata
+from app.domains.models.role import Role, UserInRole
+from app.domains.models.permission import Permission, RolePermission
+from app.domains.models.tenant import Tenant
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

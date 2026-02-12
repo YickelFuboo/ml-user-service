@@ -5,11 +5,11 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func
 from sqlalchemy.sql.expression import true
-from app.schemes.permission import PermissionBase, PermissionResponse
-from app.schemes.common import PaginationParams, PaginatedResponse
-from app.models.user import User
-from app.models.role import Role, UserInRole
-from app.models.permission import Permission, RolePermission
+from app.domains.schemes.permission import PermissionBase, PermissionResponse
+from app.domains.schemes.common import PaginationParams, PaginatedResponse
+from app.domains.models.user import User
+from app.domains.models.role import Role, UserInRole
+from app.domains.models.permission import Permission, RolePermission
 
 
 class PermissionService:
