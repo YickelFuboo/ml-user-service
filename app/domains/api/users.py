@@ -6,7 +6,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database.factory import get_db
 from app.domains.models.user import User
-from app.domains.api.deps import get_current_active_user, get_request_language
+from app.utils.deps import get_current_active_user, get_request_language
 from app.domains.schemes.common import PaginationParams, PaginatedResponse, BaseResponse
 from app.domains.schemes.user import UserUpdate, UserResponse, UserPasswordChange, PasswordRegister, SmsRegister, EmailRegister
 from app.domains.services.user_mgmt.user_service import UserService

@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Table
 from sqlalchemy.orm import relationship
-from .base import Base, TimestampMixin
+from app.infrastructure.database.model_base import Base
 
 
 # 租户成员关联表
@@ -14,27 +14,30 @@ tenant_members = Table(
 )
 
 
-class Tenant(Base, TimestampMixin):
+class Tenant(Base):
     """租户模型"""
     __tablename__ = "tenants"
-    
+
     # 主键（与 User.id 一致，UUID 36 字符）
     id = Column(String(36), primary_key=True)
-    
+
     # 租户名称
     name = Column(String(128), nullable=False, index=True, comment="租户名称")
-    
+
     # 租户描述
     description = Column(Text, nullable=True, comment="租户描述")
-    
+
     # 租户Owner ID（与 User.id 一致，UUID 36 字符）
     owner_id = Column(String(36), nullable=False, index=True, comment="租户Owner用户ID")
-    
+
     # 租户成员数量
     member_count = Column(Integer, default=1, index=True, comment="租户成员数量")
-    
+
     # 租户状态，1表示有效，0表示无效
     status = Column(String(1), nullable=False, default="1", index=True, comment="状态(0:无效, 1:有效)")
-    
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
     def __str__(self):
         return self.name 

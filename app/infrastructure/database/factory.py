@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 import time
 import asyncio
-from app.infrastructure.database.base import AsyncBaseConnection, DatabaseConfig
-from app.infrastructure.database.sql_connect import SQLConnection
+from app.infrastructure.database.db_base import AsyncBaseConnection, DatabaseConfig
+from app.infrastructure.database.db_connect import SQLConnection
 from app.config.settings import settings
 
 

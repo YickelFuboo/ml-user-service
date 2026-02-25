@@ -5,7 +5,7 @@ from typing import List
 from app.infrastructure.database.factory import get_db
 from app.domains.services.permission_mgmt.role_service import RoleService
 from app.domains.schemes.common import BaseResponse, PaginationParams, PaginatedResponse
-from app.domains.api.deps import get_current_active_user, get_request_language
+from app.utils.deps import get_current_active_user, get_request_language
 from app.domains.models.user import User
 from app.domains.schemes.role import RoleBase
 from app.domains.services.common.i18n_service import I18nService

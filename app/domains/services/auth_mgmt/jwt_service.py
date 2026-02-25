@@ -61,8 +61,8 @@ class JWTService:
                 return None
             
             payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-            username: str = payload.get("sub")
-            if username is None:
+            user_id: str = payload.get("sub")
+            if user_id is None:
                 return None
             return payload
         except JWTError:

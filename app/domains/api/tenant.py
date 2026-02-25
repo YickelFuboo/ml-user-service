@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.domains.api.deps import get_current_active_user
+from app.utils.deps import get_current_active_user
 from app.constants.common import TENANT_NAME_MAX_LENGTH, TENANT_DESCRIPTION_MAX_LENGTH
 from app.infrastructure.database import get_db
 from app.domains.models.user import User

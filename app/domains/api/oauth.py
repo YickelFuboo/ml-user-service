@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domains.schemes.auth import OAuthLogin, OAuthBind, OIDCLogin
 from app.infrastructure.database.factory import get_db
 from app.domains.services.auth_mgmt.oauth_service import OAuthService
-from app.domains.api.deps import get_request_language
+from app.utils.deps import get_request_language
 from app.domains.services.common.i18n_service import I18nService
 
 

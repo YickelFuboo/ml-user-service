@@ -12,7 +12,7 @@ from app.middleware.logging import logging_middleware
 from app.infrastructure.database import close_db, health_check_db
 from app.infrastructure.storage import STORAGE_CONN
 from app.infrastructure.redis import REDIS_CONN
-from app.domains.api.v1 import users, auth, roles, oauth, permissions, language, jwt_keys, tenant
+from app.domains.api import users, auth, roles, oauth, permissions, language, jwt_keys, tenant
 
 
 # 创建FastAPI应用

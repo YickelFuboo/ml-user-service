@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import QueuePool
 from sqlalchemy import text
 from contextlib import asynccontextmanager
-from app.infrastructure.database.base import AsyncBaseConnection, DatabaseConfig
+from app.infrastructure.database.db_base import AsyncBaseConnection, DatabaseConfig
 
 class SQLConnection(AsyncBaseConnection):
     """通用SQL数据库连接类，支持PostgreSQL、MySQL、SQLite、Oracle等"""
@@ -13,7 +13,7 @@ class SQLConnection(AsyncBaseConnection):
     # 数据库类型映射
     DB_TYPE_MAPPING = {
         'mysql': 'MySQL',
-        'postgresql': 'PostgreSQL', 
+        'postgresql': 'PostgreSQL',
         'postgres': 'PostgreSQL',
         'sqlite': 'SQLite',
         'oracle': 'Oracle',
@@ -104,7 +104,7 @@ class SQLConnection(AsyncBaseConnection):
                 raise RuntimeError("数据库引擎已创建但session_maker未初始化")
         
         session = self.session_maker()
-        try: 
+        try:
             yield session
         except Exception as e:
             await session.rollback()

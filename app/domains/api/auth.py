@@ -14,7 +14,7 @@ from app.domains.models.user import User
 from app.domains.services.auth_mgmt.auth_service import AuthService
 from app.domains.services.auth_mgmt.verify_code_service import VerifyCodeService
 from app.domains.services.common.email_service import EmailService
-from app.domains.api.deps import get_current_active_user, bearer_scheme, get_request_language
+from app.utils.deps import get_current_active_user, bearer_scheme, get_request_language
 from app.constants.common import VERIFICATION_CODE_EXPIRE_MINUTES
 from app.domains.services.common.i18n_service import I18nService
 

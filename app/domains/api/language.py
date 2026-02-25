@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database.factory import get_db
 from app.domains.models.user import User
-from app.domains.api.deps import get_current_active_user, get_request_language
+from app.utils.deps import get_current_active_user, get_request_language
 from app.domains.schemes.language import ChangeLanguageRequest
 from app.domains.schemes.common import BaseResponse
 from app.constants.language import (

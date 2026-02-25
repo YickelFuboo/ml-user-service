@@ -1,5 +1,5 @@
-# 1. 基础模型
-from .base import Base, TimestampMixin
+# 1. 基础模型（来自基础设施）
+from app.infrastructure.database.model_base import Base
 
 # 2. 核心模型（没有外键依赖）
 from .user import User, FileMetadata
@@ -13,7 +13,6 @@ from .tenant import Tenant
 
 __all__ = [
     "Base",
-    "TimestampMixin", 
     "User",
     "FileMetadata",
     "Permission",

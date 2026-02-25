@@ -10,8 +10,8 @@ from alembic import context
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 导入我们的模型
-from app.domains.models.base import Base
+# 导入我们的模型（Base 与领域模型使用的为同一基础设施 model_base）
+from app.infrastructure.database.model_base import Base
 from app.config.settings import settings
 
 # 导入所有模型以确保它们被注册到Base.metadata中
