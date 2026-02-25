@@ -1,12 +1,16 @@
-import json
-from typing import Optional, Dict, Any, List
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
-import logging
-import httpx
+import asyncio
 import base64
 import hashlib
+import logging
+from datetime import datetime, timedelta
+from typing import Optional, Dict, Any, List
+
+import httpx
+from jose import JWTError, jwt
+
 from app.config.settings import settings
+from app.domains.services.auth_mgmt.jwt_service import JWTService
+
 
 class JWTValidationError(Exception):
     """JWT验证错误基类"""
@@ -17,17 +21,24 @@ class JWTValidationError(Exception):
         super().__init__(message)
 
 class JWTLocalValidator:
-    """JWT本地验证器 - 供业务微服务进行本地JWT验证"""
-    
-    def __init__(self, cache_ttl: int = 3600, blacklist_cache_ttl: int = 300):
+    """JWT本地验证器 - 供业务微服务进行本地JWT验证；本服务(发token方)可启用 use_local 避免 HTTP 自调。"""
+
+    def __init__(
+        self,
+        cache_ttl: int = 3600,
+        blacklist_cache_ttl: int = 300,
+        use_local: Optional[bool] = None,
+    ):
         """
         初始化JWT本地验证器
-        
+
         Args:
             cache_ttl: 缓存时间（秒），默认1小时
             blacklist_cache_ttl: 黑名单缓存时间（秒），默认5分钟
+            use_local: 是否使用本地配置与本地黑名单(不HTTP拉取)。None 时从 settings.auth_use_local_jwt 读取，本服务默认 True。
         """
-        self.user_service_url = settings.auth_user_service_url.rstrip('/')
+        self.use_local = use_local if use_local is not None else getattr(settings, "auth_use_local_jwt", True)
+        self.user_service_url = (settings.auth_user_service_url or "").rstrip("/") if not self.use_local else ""
         self.cache_ttl = cache_ttl
         self.blacklist_cache_ttl = blacklist_cache_ttl
         self._jwks_cache = None
@@ -43,7 +54,30 @@ class JWTLocalValidator:
         if self._client is None:
             self._client = httpx.Client(timeout=10)
         return self._client
-    
+
+    def _get_local_config(self) -> Dict[str, Any]:
+        """本机模式：从 settings 读取 JWT 配置，不发起 HTTP。"""
+        return {
+            "algorithm": settings.jwt_algorithm,
+            "issuer": settings.app_name,
+            "audience": "microservices",
+        }
+
+    def _get_local_jwks(self) -> Dict[str, Any]:
+        """本机模式：用 settings.jwt_secret_key 构造 JWKS，与 jwt_keys 暴露格式一致。"""
+        k = base64.urlsafe_b64encode(settings.jwt_secret_key.encode("utf-8")).decode("utf-8").rstrip("=")
+        return {
+            "keys": [
+                {
+                    "kty": "oct",
+                    "k": k,
+                    "alg": settings.jwt_algorithm,
+                    "use": "sig",
+                    "kid": "user-service-key-1",
+                }
+            ]
+        }
+
     def _is_cache_valid(self, cache_time: Optional[datetime]) -> bool:
         """检查缓存是否有效"""
         if cache_time is None:
@@ -144,19 +178,21 @@ class JWTLocalValidator:
         return self._blacklist_cache or []
     
     def get_jwks(self) -> Dict[str, Any]:
-        """获取JWKS（带缓存）"""
+        """获取JWKS（带缓存）；本机模式直接返回本地构造的 JWKS。"""
+        if self.use_local:
+            return self._get_local_jwks()
         if not self._is_cache_valid(self._jwks_cache_time):
             self._jwks_cache = self._fetch_jwks()
             self._jwks_cache_time = datetime.utcnow()
-        
         return self._jwks_cache
-    
+
     def get_jwt_config(self) -> Dict[str, Any]:
-        """获取JWT配置（带缓存）"""
+        """获取JWT配置（带缓存）；本机模式直接返回本地配置。"""
+        if self.use_local:
+            return self._get_local_config()
         if not self._is_cache_valid(self._config_cache_time):
             self._config_cache = self._fetch_jwt_config()
             self._config_cache_time = datetime.utcnow()
-        
         return self._config_cache
     
     def _validate_payload_fields(self, payload: Dict[str, Any]) -> None:
@@ -189,16 +225,15 @@ class JWTLocalValidator:
     
     def verify_token(self, token: str) -> Dict[str, Any]:
         """
-        本地验证JWT令牌
-        
-        Args:
-            token: JWT令牌
-            
-        Returns:
-            Dict: 验证结果
+        同步验证JWT令牌。本机模式(use_local=True)下黑名单需异步查询，请使用 verify_token_async。
         """
+        if self.use_local:
+            return {
+                "success": False,
+                "message": "本机模式请使用 verify_token_async",
+                "data": {"valid": False, "reason": "use_async", "error_code": "USE_VERIFY_TOKEN_ASYNC"},
+            }
         try:
-            # 获取JWT配置
             config = self.get_jwt_config()
             algorithm = config.get("algorithm", "HS256")
             issuer = config.get("issuer")
@@ -291,15 +326,15 @@ class JWTLocalValidator:
                     "aud": payload.get("aud")
                 }
             }
-            
+
         except JWTValidationError as e:
             logging.warning(f"JWT验证失败: {e.message} (错误码: {e.error_code})")
             return {
                 "success": False,
                 "message": e.message,
                 "data": {
-                    "valid": False, 
-                    "reason": "validation_error", 
+                    "valid": False,
+                    "reason": "validation_error",
                     "error_code": e.error_code,
                     "details": e.details
                 }
@@ -318,7 +353,100 @@ class JWTLocalValidator:
                 "message": f"令牌验证异常: {str(e)}",
                 "data": {"valid": False, "reason": "exception", "error_code": "VALIDATION_EXCEPTION"}
             }
-    
+
+    async def verify_token_async(self, token: str) -> Dict[str, Any]:
+        """
+        异步验证JWT令牌。本机模式时用本地配置+Redis黑名单，不发起HTTP；非本机模式时在线程中执行同步 verify_token。
+        """
+        if self.use_local:
+            return await self._verify_token_local_async(token)
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, lambda: self.verify_token(token))
+
+    async def _verify_token_local_async(self, token: str) -> Dict[str, Any]:
+        """本机模式：本地配置验签 + 本地 Redis 黑名单检查。"""
+        try:
+            config = self._get_local_config()
+            algorithm = config.get("algorithm", "HS256")
+            issuer = config.get("issuer")
+            audience = config.get("audience")
+            secret_key = settings.jwt_secret_key
+
+            payload = jwt.decode(
+                token,
+                secret_key,
+                algorithms=[algorithm],
+                issuer=issuer,
+                audience=audience,
+                options={
+                    "verify_signature": True,
+                    "verify_exp": True,
+                    "verify_iat": True,
+                    "verify_iss": True,
+                    "verify_aud": True
+                }
+            )
+            self._validate_payload_fields(payload)
+            token_type = payload.get("type")
+            if token_type and token_type != "access":
+                return {
+                    "success": False,
+                    "message": "令牌类型错误",
+                    "data": {
+                        "valid": False,
+                        "reason": "wrong_token_type",
+                        "error_code": "INVALID_TOKEN_TYPE",
+                        "expected_type": "access",
+                        "actual_type": token_type
+                    }
+                }
+            if await JWTService.is_blacklisted(token):
+                return {
+                    "success": False,
+                    "message": "令牌已被注销",
+                    "data": {"valid": False, "reason": "token_blacklisted", "error_code": "TOKEN_BLACKLISTED"}
+                }
+            return {
+                "success": True,
+                "message": "令牌验证成功",
+                "data": {
+                    "valid": True,
+                    "user_id": payload.get("sub"),
+                    "username": payload.get("username"),
+                    "roles": payload.get("roles", []),
+                    "email": payload.get("email"),
+                    "phone": payload.get("phone"),
+                    "full_name": payload.get("full_name"),
+                    "is_superuser": payload.get("is_superuser", False),
+                    "is_active": payload.get("is_active", True),
+                    "exp": payload.get("exp"),
+                    "iat": payload.get("iat"),
+                    "iss": payload.get("iss"),
+                    "aud": payload.get("aud")
+                }
+            }
+        except JWTValidationError as e:
+            logging.warning(f"JWT验证失败: {e.message} (错误码: {e.error_code})")
+            return {
+                "success": False,
+                "message": e.message,
+                "data": {"valid": False, "reason": "validation_error", "error_code": e.error_code, "details": e.details}
+            }
+        except JWTError as e:
+            logging.warning(f"JWT解析失败: {e}")
+            return {
+                "success": False,
+                "message": f"JWT验证失败: {str(e)}",
+                "data": {"valid": False, "reason": "jwt_error", "error_code": "JWT_DECODE_ERROR"}
+            }
+        except Exception as e:
+            logging.error(f"令牌验证异常: {e}")
+            return {
+                "success": False,
+                "message": f"令牌验证异常: {str(e)}",
+                "data": {"valid": False, "reason": "exception", "error_code": "VALIDATION_EXCEPTION"}
+            }
+
     def extract_user_info(self, token: str) -> Dict[str, Any]:
         """
         从令牌中提取用户信息（不验证签名，仅解析）

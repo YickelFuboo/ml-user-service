@@ -99,6 +99,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256", description="JWT算法", env="JWT_ALGORITHM")
     jwt_access_token_expire_minutes: int = Field(default=30, description="访问令牌过期时间(分钟)", env="JWT_ACCESS_TOKEN_EXPIRE_MINUTES")
     jwt_refresh_token_expire_days: int = Field(default=7, description="刷新令牌过期时间(天)", env="JWT_REFRESH_TOKEN_EXPIRE_DAYS")
+    auth_use_local_jwt: bool = Field(default=True, description="本服务是否使用本地JWT验证(不HTTP自调); 发token的本服务为True, 其他业务服务为False", env="AUTH_USE_LOCAL_JWT")
+    auth_user_service_url: Optional[str] = Field(default=None, description="认证服务地址(仅当auth_use_local_jwt=False时必填)", env="AUTH_USER_SERVICE_URL")
+    auth_jwks_endpoint: str = Field(default="/api/v1/jwt/.well-known/jwks.json", description="JWKS端点路径", env="AUTH_JWKS_ENDPOINT")
+    auth_jwt_config_endpoint: str = Field(default="/api/v1/jwt/jwt-config", description="JWT配置端点路径", env="AUTH_JWT_CONFIG_ENDPOINT")
+    auth_blacklist_endpoint: str = Field(default="/api/v1/jwt/blacklist", description="黑名单端点路径", env="AUTH_BLACKLIST_ENDPOINT")
 
     # =============================================================================
     # 短信配置
@@ -195,6 +200,11 @@ class Settings(BaseSettings):
         if self.redis_password:
             return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def app_name(self) -> str:
+        """应用名称(用于JWT issuer等)"""
+        return APP_NAME
 
 
 # 全局配置实例

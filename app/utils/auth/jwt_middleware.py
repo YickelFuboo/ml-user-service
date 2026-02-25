@@ -2,8 +2,8 @@ import logging
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from typing import Optional, Callable, List
-from app.infrastructure.auth.jwt_local_validator import JWTLocalValidator
-from app.config.settings import settings
+from .jwt_local_validator import JWTLocalValidator
+
 
 class JWTAuthMiddleware:
     """JWT认证中间件 - 供业务微服务使用"""
@@ -44,13 +44,9 @@ class JWTAuthMiddleware:
         # 检查Bearer格式
         if not auth_header.startswith("Bearer "):
             return self._handle_auth_failed("Authorization格式错误", status.HTTP_401_UNAUTHORIZED)
-        
-        # 提取令牌
-        token = auth_header[7:]  # 去掉"Bearer "前缀
-        
-        # 验证令牌
-        result = self.validator.verify_token(token)
-        
+
+        token = auth_header[7:]
+        result = await self.validator.verify_token_async(token)
         if not result.get("success") or not result.get("data", {}).get("valid"):
             return self._handle_auth_failed(
                 result.get("message", "令牌验证失败"),
@@ -108,9 +104,8 @@ class JWTAuthDependency:
         """
         self.validator = JWTLocalValidator(cache_ttl, blacklist_cache_ttl)
     
-    def __call__(self, request: Request):
-        """依赖函数"""
-        # 获取Authorization头
+    async def __call__(self, request: Request):
+        """依赖函数（本机模式用本地配置+Redis黑名单，不HTTP自调）"""
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             raise HTTPException(
@@ -118,29 +113,20 @@ class JWTAuthDependency:
                 detail="缺少Authorization头",
                 headers={"WWW-Authenticate": "Bearer"}
             )
-        
-        # 检查Bearer格式
         if not auth_header.startswith("Bearer "):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Authorization格式错误",
                 headers={"WWW-Authenticate": "Bearer"}
             )
-        
-        # 提取令牌
-        token = auth_header[7:]  # 去掉"Bearer "前缀
-        
-        # 验证令牌
-        result = self.validator.verify_token(token)
-        
+        token = auth_header[7:]
+        result = await self.validator.verify_token_async(token)
         if not result.get("success") or not result.get("data", {}).get("valid"):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=result.get("message", "令牌验证失败"),
                 headers={"WWW-Authenticate": "Bearer"}
             )
-        
-        # 返回用户信息
         return result.get("data", {})
     
     def close(self):
