@@ -1,70 +1,110 @@
 import os
+import re
 import sys
+import urllib.parse
 from logging.config import fileConfig
 
-from sqlalchemy import create_engine, engine_from_config
-from sqlalchemy import pool
-
+from sqlalchemy import create_engine, pool, text
 from alembic import context
 
-# 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 导入我们的模型（Base 与领域模型使用的为同一基础设施 model_base）
 from app.infrastructure.database.model_base import Base
-from app.config.settings import settings
-
-# 导入所有模型以确保它们被注册到Base.metadata中
 from app.domains.models.user import User, FileMetadata
 from app.domains.models.role import Role, UserInRole
 from app.domains.models.permission import Permission, RolePermission
-from app.domains.models.tenant import Tenant
+from app.domains.models.tenant import Tenant, tenant_members
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
-
-# 设置数据库URL - alembic需要使用同步驱动
-import urllib.parse
-
-if settings.database_type.lower() == "postgresql":
-    encoded_password = urllib.parse.quote_plus(settings.postgresql_password)
-    database_url = f"postgresql+psycopg2://{settings.postgresql_user}:{encoded_password}@{settings.postgresql_host}:{settings.postgresql_port}/{settings.db_name}?client_encoding=utf8"
-elif settings.database_type.lower() == "mysql":
-    encoded_password = urllib.parse.quote_plus(settings.mysql_password)
-    database_url = f"mysql+pymysql://{settings.mysql_user}:{encoded_password}@{settings.mysql_host}:{settings.mysql_port}/{settings.db_name}"
-else:
-    database_url = "sqlite:///./user_service.db"
-
-config.set_main_option("sqlalchemy.url", database_url)
-
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
-
-# add your model's MetaData object here
-# for 'autogenerate' support
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if config.config_file_name:
+    _PROJECT_ROOT = os.path.dirname(os.path.abspath(config.config_file_name))
+
+
+def _load_env() -> dict:
+    """从项目根（alembic.ini 所在目录）的 env 或 .env 读取，优先 env；使用 utf-8-sig 以兼容 BOM。"""
+    out = {}
+    for name in ("env", ".env"):
+        path = os.path.join(_PROJECT_ROOT, name)
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, "r", encoding="utf-8-sig") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    k, _, v = line.partition("=")
+                    key = k.strip().lstrip("\ufeff")
+                    out[key] = v.strip().strip('"').strip("'")
+        except Exception:
+            pass
+        break
+    return out
+
+
+_ENV = _load_env()
+
+
+def _get(key: str, default: str = "") -> str:
+    return _ENV.get(key, os.environ.get(key, default))
+
+
+def _build_database_url() -> str:
+    """根据配置构建数据库 URL。PostgreSQL 迁移使用 pg8000（纯 Python）避免 Windows 下 psycopg2 编码问题。"""
+    db_type = _get("DATABASE_TYPE", "postgresql").strip().lower()
+    db_name = _get("DB_NAME", "pando_user_service")
+
+    def q(s: str) -> str:
+        return urllib.parse.quote(str(s), safe="")
+
+    if db_type == "postgresql":
+        user = q(_get("POSTGRESQL_USER", "postgres"))
+        password = q(_get("POSTGRESQL_PASSWORD", ""))
+        host = q(_get("POSTGRESQL_HOST", "localhost"))
+        port = _get("POSTGRESQL_PORT", "5432")
+        return f"postgresql+pg8000://{user}:{password}@{host}:{port}/{q(db_name)}"
+    if db_type == "mysql":
+        user = q(_get("MYSQL_USER", "root"))
+        password = q(_get("MYSQL_PASSWORD", ""))
+        host = q(_get("MYSQL_HOST", "localhost"))
+        port = _get("MYSQL_PORT", "3306")
+        return f"mysql+pymysql://{user}:{password}@{host}:{port}/{q(db_name)}"
+    return "sqlite:///./user_service.db"
+
+
+database_url = os.environ.get("ALEMBIC_DATABASE_URL") or _build_database_url()
+config.set_main_option("sqlalchemy.url", database_url)
+
+if config.config_file_name:
+    fileConfig(config.config_file_name)
+
+
+def _ensure_postgres_database() -> None:
+    """PostgreSQL 时：若目标库不存在则连 postgres 库并创建，避免 3D000。"""
+    if _get("DATABASE_TYPE", "postgresql").strip().lower() != "postgresql":
+        return
+    db_name = _get("DB_NAME", "pando_user_service")
+    if not re.match(r"^[a-zA-Z0-9_]+$", db_name):
+        return
+    url = config.get_main_option("sqlalchemy.url") or database_url
+    if "/" not in url or "+pg8000" not in url:
+        return
+    base_url = url.rsplit("/", 1)[0] + "/postgres"
+    engine = create_engine(base_url, poolclass=pool.NullPool)
+    try:
+        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+            r = conn.execute(text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": db_name}).fetchone()
+            if not r:
+                conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+    finally:
+        engine.dispose()
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
+    """离线模式：仅生成 SQL，不连接数据库。"""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -72,33 +112,19 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
+    """在线模式：连接数据库并执行迁移。"""
     url = config.get_main_option("sqlalchemy.url")
-    connect_args = {}
-    if url and "postgresql" in url:
-        connect_args["options"] = "-c client_encoding=UTF8"
-    connectable = create_engine(
-        url,
-        poolclass=pool.NullPool,
-        connect_args=connect_args,
-    )
-
+    if _get("DATABASE_TYPE", "postgresql").strip().lower() == "postgresql":
+        h, p, db = _get("POSTGRESQL_HOST", "localhost"), _get("POSTGRESQL_PORT", "5432"), _get("DB_NAME", "pando_user_service")
+        print(f"[alembic] 连接: host={h} port={p} database={db}", file=sys.stderr)
+    connectable = create_engine(url, poolclass=pool.NullPool)
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
-
+        context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()
 
@@ -106,4 +132,5 @@ def run_migrations_online() -> None:
 if context.is_offline_mode():
     run_migrations_offline()
 else:
+    _ensure_postgres_database()
     run_migrations_online()

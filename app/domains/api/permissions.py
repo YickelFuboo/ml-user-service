@@ -6,7 +6,7 @@ from app.infrastructure.database.factory import get_db
 from app.domains.services.permission_mgmt.permission_service import PermissionService
 from app.domains.schemes.common import BaseResponse, PaginationParams, PaginatedResponse
 from app.domains.schemes.permission import PermissionBase, PermissionResponse, RolePermissionAssign
-from app.utils.deps import get_current_active_user, get_request_language
+from app.utils.deps import get_current_active_user, get_current_superuser,get_request_language
 from app.domains.models.user import User
 from app.domains.services.common.i18n_service import I18nService
 
@@ -17,16 +17,10 @@ router = APIRouter()
 async def create_permission(
     permission_data: PermissionBase,
     language: str = Depends(get_request_language),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     session: AsyncSession = Depends(get_db)
 ):
-    """创建权限"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=I18nService.get_error_message("permission_denied", language)
-        )
-    
+    """创建权限"""    
     try:
         permission = await PermissionService.create_permission(session, permission_data)
         
@@ -57,16 +51,10 @@ async def create_permission(
 async def assign_permission_to_role(
     assign_data: RolePermissionAssign,
     language: str = Depends(get_request_language),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     session: AsyncSession = Depends(get_db)
 ):
     """为角色分配权限"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=I18nService.get_error_message("permission_denied", language)
-        )
-    
     try:
         # 为每个权限ID分配权限
         success_count = 0

@@ -81,3 +81,8 @@ class UserPasswordChange(BaseModel):
     """用户密码修改模型"""
     old_password: str
     new_password: str
+
+
+class SetSuperuserBody(BaseModel):
+    """设置/取消超级用户请求体"""
+    is_superuser: bool

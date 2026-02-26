@@ -6,9 +6,9 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database.factory import get_db
 from app.domains.models.user import User
-from app.utils.deps import get_current_active_user, get_request_language
+from app.utils.deps import get_current_active_user, get_current_superuser, get_request_language
 from app.domains.schemes.common import PaginationParams, PaginatedResponse, BaseResponse
-from app.domains.schemes.user import UserUpdate, UserResponse, UserPasswordChange, PasswordRegister, SmsRegister, EmailRegister
+from app.domains.schemes.user import UserUpdate, UserResponse, UserPasswordChange, PasswordRegister, SmsRegister, EmailRegister, SetSuperuserBody
 from app.domains.services.user_mgmt.user_service import UserService
 from app.domains.services.common.file_service import FileService, FileType
 from app.domains.services.common.i18n_service import I18nService
@@ -131,6 +131,36 @@ async def get_user(
         )
     except Exception as e:
         logging.error(f"获取用户详情失败 - 用户ID: {user_id}, 错误: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=I18nService.get_error_message("server_error", language)
+        )
+
+@router.patch("/{user_id}/superuser", response_model=BaseResponse)
+async def set_user_superuser(
+    user_id: str,
+    body: SetSuperuserBody,
+    language: str = Depends(get_request_language),
+    current_user: User = Depends(get_current_superuser),
+    session: AsyncSession = Depends(get_db)
+):
+    """设置或取消指定用户的超级管理员身份（仅超级管理员可操作）"""
+    try:
+        user = await UserService.set_superuser(session, user_id, body.is_superuser)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=I18nService.get_error_message("user_not_found", language)
+            )
+        return BaseResponse(
+            success=True,
+            message=I18nService.get_success_message("user_updated", language),
+            data=UserResponse.model_validate(user)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error("设置超级用户失败 - user_id=%s, error=%s", user_id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=I18nService.get_error_message("server_error", language)

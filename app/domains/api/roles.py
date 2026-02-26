@@ -5,7 +5,7 @@ from typing import List
 from app.infrastructure.database.factory import get_db
 from app.domains.services.permission_mgmt.role_service import RoleService
 from app.domains.schemes.common import BaseResponse, PaginationParams, PaginatedResponse
-from app.utils.deps import get_current_active_user, get_request_language
+from app.utils.deps import get_current_active_user, get_current_superuser, get_request_language
 from app.domains.models.user import User
 from app.domains.schemes.role import RoleBase
 from app.domains.services.common.i18n_service import I18nService
@@ -16,16 +16,10 @@ router = APIRouter()
 async def create_role(
     role_data: RoleBase,
     language: str = Depends(get_request_language),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     session: AsyncSession = Depends(get_db)
 ):
-    """创建角色"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=I18nService.get_error_message("permission_denied", language)
-        )
-    
+    """创建角色"""   
     try:
         role = await RoleService.create_role(session, role_data)
         return BaseResponse(
@@ -90,16 +84,10 @@ async def update_role(
     role_id: str,
     role_data: RoleBase,
     language: str = Depends(get_request_language),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     session: AsyncSession = Depends(get_db)
 ):
     """更新角色"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=I18nService.get_error_message("permission_denied", language)
-        )
-
     try:
         role = await RoleService.update_role(session, role_id, role_data)
         if not role:
@@ -124,16 +112,10 @@ async def update_role(
 async def delete_role(
     role_id: str,
     language: str = Depends(get_request_language),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     session: AsyncSession = Depends(get_db)
 ):
-    """删除角色"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=I18nService.get_error_message("permission_denied", language)
-        )
-    
+    """删除角色"""    
     try:
         success = await RoleService.delete_role(session, role_id)
         if not success:
@@ -181,16 +163,10 @@ async def add_users_to_role(
     role_id: str,
     user_ids: List[str],
     language: str = Depends(get_request_language),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     session: AsyncSession = Depends(get_db)
 ):
-    """为角色添加用户"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=I18nService.get_error_message("permission_denied", language)
-        )
-    
+    """为角色添加用户"""   
     try:
         role_service = RoleService(session)
         success = role_service.add_users_to_role(role_id, user_ids)
@@ -217,16 +193,10 @@ async def remove_users_from_role(
     role_id: str,
     user_ids: List[str],
     language: str = Depends(get_request_language),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_superuser),
     session: AsyncSession = Depends(get_db)
 ):
     """从角色移除用户"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=I18nService.get_error_message("permission_denied", language)
-        )
-    
     try:
         role_service = RoleService(session)
         success = role_service.remove_users_from_role(role_id, user_ids)

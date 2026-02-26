@@ -457,7 +457,17 @@ class UserService:
             (User.user_name == username) | (User.email == username)
         ))
         return result.scalar_one_or_none()
-    
+
+    @staticmethod
+    async def set_superuser(session: AsyncSession, user_id: str, is_superuser: bool) -> Optional[User]:
+        """设置或取消用户的超级管理员身份（仅超级管理员可调用）"""
+        user = await UserService.get_user_by_id(session, user_id)
+        if not user:
+            return None
+        user.is_superuser = is_superuser
+        await session.commit()
+        await session.refresh(user)
+        return user
     
     @staticmethod
     async def update_user(session: AsyncSession, user_id: str, user_data: UserUpdate) -> User:
