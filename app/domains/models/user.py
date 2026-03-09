@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy import Column, String, Boolean, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from app.infrastructure.database.model_base import Base
+from app.infrastructure.database.models_base import Base
 
 
 class User(Base):
