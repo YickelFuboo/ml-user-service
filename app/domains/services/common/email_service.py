@@ -33,6 +33,10 @@ class EmailService:
             bool: 发送是否成功
         """
         try:
+            if not settings.email_host or not settings.email_port or not settings.email_username or not settings.email_password:
+                logging.error("邮件配置未完整")
+                return False
+
             # 创建邮件对象
             msg = MIMEMultipart()
             msg['From'] = settings.email_from
