@@ -43,15 +43,14 @@ class UserService:
                     detail="用户名、邮箱或手机号不能为空"
                 )
 
-            # 检查用户信息是否可用
-            UserService._is_username_available(auth_data.user_name, auth_data.user_full_name)
-            UserService._is_email_available(auth_data.email)
-            UserService._is_phone_available(auth_data.phone)
+            # 检查密码是否可用
             UserService._is_password_available(auth_data.password)
 
             # 检查用户信息是否已存在
             if auth_data.user_name:
                 try:
+                    # 检查用户信息是否可用
+                    UserService._is_username_available(auth_data.user_name, auth_data.user_full_name)
                     result = await session.execute(select(User).where(User.user_name == auth_data.user_name))
                     existing_user = result.scalar_one_or_none()
                     if existing_user:
@@ -68,6 +67,8 @@ class UserService:
         
             if auth_data.email:
                 try:
+                    # 检查邮箱是否可用
+                    UserService._is_email_available(auth_data.email)
                     result = await session.execute(select(User).where(User.email == auth_data.email))
                     existing_user = result.scalar_one_or_none()
                     if existing_user:
@@ -84,6 +85,8 @@ class UserService:
             
             if auth_data.phone:
                 try:
+                    # 检查手机号是否可用
+                    UserService._is_phone_available(auth_data.phone)                    
                     result = await session.execute(select(User).where(User.phone == auth_data.phone))
                     existing_user = result.scalar_one_or_none()
                     if existing_user:

@@ -9,7 +9,7 @@ from alembic import context
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.infrastructure.database.model_base import Base
+from app.infrastructure.database.models_base import Base
 from app.domains.models.user import User, FileMetadata
 from app.domains.models.role import Role, UserInRole
 from app.domains.models.permission import Permission, RolePermission
@@ -49,7 +49,7 @@ _ENV = _load_env()
 
 
 def _get(key: str, default: str = "") -> str:
-    return _ENV.get(key, os.environ.get(key, default))
+    return os.environ.get(key, _ENV.get(key, default))
 
 
 def _build_database_url() -> str:
@@ -72,7 +72,21 @@ def _build_database_url() -> str:
         host = q(_get("MYSQL_HOST", "localhost"))
         port = _get("MYSQL_PORT", "3306")
         return f"mysql+pymysql://{user}:{password}@{host}:{port}/{q(db_name)}"
-    return "sqlite:///./user_service.db"
+    sqlite_path = _get("SQLITE_PATH", "").strip()
+    if sqlite_path:
+        sqlite_abs = os.path.abspath(os.path.join(_PROJECT_ROOT, sqlite_path)) if not os.path.isabs(sqlite_path) else sqlite_path
+        sqlite_dir = os.path.dirname(sqlite_abs)
+        if sqlite_dir and not os.path.isdir(sqlite_dir):
+            os.makedirs(sqlite_dir, exist_ok=True)
+        sqlite_norm = sqlite_abs.replace("\\", "/")
+        return f"sqlite:///{sqlite_norm}"
+    filename = db_name if str(db_name).lower().endswith(".db") else f"{db_name}.db"
+    sqlite_abs = os.path.abspath(os.path.join(_PROJECT_ROOT, "data", filename))
+    sqlite_dir = os.path.dirname(sqlite_abs)
+    if sqlite_dir and not os.path.isdir(sqlite_dir):
+        os.makedirs(sqlite_dir, exist_ok=True)
+    sqlite_norm = sqlite_abs.replace("\\", "/")
+    return f"sqlite:///{sqlite_norm}"
 
 
 database_url = os.environ.get("ALEMBIC_DATABASE_URL") or _build_database_url()

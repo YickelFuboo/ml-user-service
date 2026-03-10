@@ -8,7 +8,7 @@ import shutil
 import uuid
 from pathlib import Path
 from app.infrastructure.storage.base import StorageBase
-from app.config.settings import APP_NAME
+from app.config.settings import APP_NAME, PROJECT_BASE_DIR
 
 class LocalStorage(StorageBase):
     """本地文件存储实现"""
@@ -21,7 +21,7 @@ class LocalStorage(StorageBase):
             upload_dir: 上传目录路径
         """
         # 确保上传目录存在
-        self.upload_dir = Path(upload_dir)        
+        self.upload_dir = Path(upload_dir)      
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
         self.default_bucket_name = APP_NAME.lower().replace("_", "-")
