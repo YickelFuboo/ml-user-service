@@ -331,7 +331,7 @@ async def upload_avatar(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=I18nService.get_error_message("server_error", language)
+            detail=I18nService.get_error_message("server_error", language) + f": {str(e)}"
         )
 
 @router.get("/{user_id}/avatar")
@@ -356,10 +356,7 @@ async def get_user_avatar(
                 detail=I18nService.get_error_message("user_not_found", language)
             )
         if not user.avatar:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=I18nService.get_error_message("user_not_set_avatar", language)
-            )
+            return Response(content=None, media_type="image/png")
 
         result = await FileService.get_file_content(user.avatar, FileType.AVATAR)
         if not result:

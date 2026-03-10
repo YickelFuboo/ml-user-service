@@ -64,7 +64,7 @@ class FileService:
             file_data.seek(0)  # 重置到文件开头
             if config["max_size_kb"] and file_size > config["max_size_kb"] * 1024:
                 logging.error(f"文件大小超过限制: {file_size} bytes")
-                return None
+                raise ValueError(f"文件大小超过限制: {file_size} bytes")
             
             # 处理图片（如果需要且是图片文件）
             if config["process_image"] and FileService._is_image_file(file_ext):
@@ -98,7 +98,7 @@ class FileService:
             
         except Exception as e:
             logging.error(f"文件上传失败: {e}")
-            return None
+            raise e
 
     @staticmethod
     async def get_file_content(file_id: str, file_type: FileType) -> Optional[tuple[bytes, str]]:
